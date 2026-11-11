@@ -26,6 +26,7 @@ variable "peers" {
   description = "Map of WireGuard peer configurations to generate."
   type = map(object({
     ip            = string
+    private_key   = optional(string)
     public_key    = optional(string)
     preshared_key = optional(string)
   }))

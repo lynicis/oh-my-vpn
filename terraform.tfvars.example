@@ -45,8 +45,11 @@ admin_ssh_allowed_cidrs = [
 
 # WireGuard peers. Omit public_key / preshared_key to have Terraform generate
 # them and write the client config into clients/.
+# Supply private_key for peers whose key pair already exists outside Terraform
+# (type: optional(string)); otherwise omit it and Terraform generates one.
 peers = {
   laptop = {
     ip = "10.8.0.2"
+    # private_key = "base64-encoded-private-key="
   }
 }
