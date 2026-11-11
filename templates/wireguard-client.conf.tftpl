@@ -2,6 +2,8 @@
 Address = ${client_ip}/32
 %{ if client_private_key != null && client_private_key != "" ~}
 PrivateKey = ${client_private_key}
+%{ else ~}
+# PrivateKey = <insert client private key generated on device>
 %{ endif ~}
 DNS = 10.8.0.1
 

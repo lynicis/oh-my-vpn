@@ -55,6 +55,11 @@ output "client_configs_dir" {
 output "client_qr_commands" {
   description = "Per-client shell commands to print the WireGuard configuration QR code in the terminal."
   value = {
-    for name in keys(local.peers_computed) : name => "qrencode -t ansiutf8 < clients/${name}/wireguard.conf"
+    for name in keys(local.peers_computed) : name => "qrencode -t ansiutf8 < ${path.module}/clients/${name}/wireguard.conf"
   }
+}
+
+output "peer_public_keys" {
+  description = "Public keys of all configured peers (for server-side wg set wg0 peer enrollment)."
+  value       = { for name, peer in local.peers_computed : name => peer.public_key }
 }

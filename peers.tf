@@ -37,7 +37,7 @@ locals {
       name             = name
       ip               = peer.ip
       private_key      = peer.private_key != null && peer.private_key != "" ? peer.private_key : try(wireguard_asymmetric_key.peer[name].private_key, null)
-      public_key       = coalesce(peer.public_key, try(wireguard_asymmetric_key.peer[name].public_key, null))
+      public_key       = peer.public_key != null && peer.public_key != "" ? peer.public_key : try(wireguard_asymmetric_key.peer[name].public_key, null)
       preshared_key    = coalesce(peer.preshared_key, try(wireguard_preshared_key.peer[name].key, null))
       uuid_doh_profile = random_uuid.peer_doh_profile[name].result
       uuid_doh_payload = random_uuid.peer_doh_payload[name].result

@@ -202,7 +202,7 @@ write_files:
       -- ========================================================
       -- DoH Listeners (Port 443) - TLS 1.2 & TLS 1.3
       -- ========================================================
-      addDOHLocal("10.0.1.4:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
+      addDOHLocal("10.0.1.4:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}"}, {
           minTLSVersion = "tls1.2"
       })
       addDOHLocal("10.8.0.1:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {

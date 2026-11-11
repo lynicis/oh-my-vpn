@@ -35,6 +35,11 @@ server_domain_name = "dns.example.com"
 # WireGuard UDP listening port (default standard WireGuard port is 51820)
 wireguard_port = 51820
 
+# Public key of the WireGuard server, embedded into every generated client config.
+# Read it from the running VM after the first apply:
+#   ssh azureuser@<server_public_ip> "sudo cat /etc/wireguard/server_public.key"
+wireguard_server_public_key = "t1dI2vHu3PfHjGJ1WflW9xx9ugMPii5qk5mFsnNLfl0="
+
 # Allowed CIDR blocks for administrative SSH access (TCP port 22)
 # IMPORTANT: For security, restrict this to your public IP or office CIDR (e.g. ["203.0.113.50/32"]).
 # Leaving this as ["0.0.0.0/0"] exposes SSH to the public Internet.
