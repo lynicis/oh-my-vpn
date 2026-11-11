@@ -1,0 +1,27 @@
+Encrypted DNS setup for ${server_domain_name}
+==============================================
+
+Use any of the following to send DNS queries to the oh-my-vpn resolver.
+
+Android (Private DNS)
+---------------------
+Settings -> Network & internet -> Private DNS -> Private DNS provider hostname:
+  ${server_domain_name}
+
+Browser / OS DNS-over-HTTPS (DoH)
+---------------------------------
+DoH URL:
+  https://${server_domain_name}${doh_path}
+
+Chrome/Edge: Settings -> Privacy and security -> Security -> Use secure DNS
+-> Custom, then paste the DoH URL above.
+
+Firefox: Settings -> Privacy & Security -> DNS over HTTPS -> Max Protection
+-> Custom, then paste the DoH URL above.
+
+DNS-over-TLS (DoT)
+------------------
+Endpoint:
+  ${server_domain_name}:853
+
+Note: ${server_domain_name} must resolve to ${server_public_ip}.

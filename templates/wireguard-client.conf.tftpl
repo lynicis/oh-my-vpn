@@ -1,0 +1,13 @@
+[Interface]
+Address = ${client_ip}/32
+%{ if client_private_key != null && client_private_key != "" ~}
+PrivateKey = ${client_private_key}
+%{ endif ~}
+DNS = 10.8.0.1
+
+[Peer]
+PublicKey = ${server_public_key}
+Endpoint = ${endpoint}
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+PresharedKey = ${preshared_key}
