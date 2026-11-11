@@ -55,6 +55,12 @@ variable "vm_size" {
   default     = "Standard_B2ats_v2"
 }
 
+variable "wireguard_server_public_key" {
+  description = "Public key of the WireGuard server for client configs."
+  type        = string
+  default     = "t1dI2vHu3PfHjGJ1WflW9xx9ugMPii5qk5mFsnNLfl0="
+}
+
 variable "wireguard_port" {
   description = "UDP port for incoming WireGuard tunnel traffic."
   type        = number

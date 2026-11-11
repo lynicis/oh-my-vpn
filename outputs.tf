@@ -41,3 +41,20 @@ output "doh_url" {
   description = "DNS-over-HTTPS endpoint URL with secret path."
   value       = "https://${var.server_domain_name}${local.doh_path}"
 }
+
+output "generated_clients" {
+  description = "Names of the WireGuard clients whose configuration files were generated."
+  value       = keys(local.peers_computed)
+}
+
+output "client_configs_dir" {
+  description = "Absolute path to the directory containing generated client configuration files."
+  value       = abspath("${path.module}/clients")
+}
+
+output "client_qr_commands" {
+  description = "Per-client shell commands to print the WireGuard configuration QR code in the terminal."
+  value = {
+    for name in keys(local.peers_computed) : name => "qrencode -t ansiutf8 < clients/${name}/wireguard.conf"
+  }
+}
