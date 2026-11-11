@@ -163,10 +163,10 @@ write_files:
       -- ========================================================
       -- Global Settings & Buffers
       -- ========================================================
-      setRingBuffersSize(0)
-      setTCPRecvTimeout(5)
-      setTCPSendTimeout(5)
-      setMaxTCPConnectionsPerClient(15)
+      setRingBuffersSize(10000)
+      setTCPRecvTimeout(30)
+      setTCPSendTimeout(30)
+      setMaxTCPConnectionsPerClient(100)
       setACL({"0.0.0.0/0", "::/0"})
       controlSocket("127.0.0.1:5199")
       setKey("Pga+xLRuvu2SrHR91GTPhQsvqQEXbrxFUyD0j+vzXWQ=")
@@ -176,40 +176,40 @@ write_files:
       -- ========================================================
       newServer({
           address = "10.0.1.4:53",
-          name = "pihole-tcp",
-          tcpOnly = true,
+          name = "pihole",
+          tcpOnly = false,
           useClientSubnet = false,
           checkInterval = 2,
           maxCheckFailures = 3
       })
 
       -- ========================================================
-      -- TLS / DoT Listeners (Port 853) - TLS 1.3
+      -- TLS / DoT Listeners (Port 853) - TLS 1.2 & TLS 1.3
       -- ========================================================
       addTLSLocal("10.0.1.4:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
           provider = "openssl",
-          minTLSVersion = "tls1.3"
+          minTLSVersion = "tls1.2"
       })
       addTLSLocal("10.8.0.1:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
           provider = "openssl",
-          minTLSVersion = "tls1.3"
+          minTLSVersion = "tls1.2"
       })
       addTLSLocal("127.0.0.1:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
           provider = "openssl",
-          minTLSVersion = "tls1.3"
+          minTLSVersion = "tls1.2"
       })
 
       -- ========================================================
-      -- DoH Listeners (Port 443) - TLS 1.3
+      -- DoH Listeners (Port 443) - TLS 1.2 & TLS 1.3
       -- ========================================================
-      addDOHLocal("10.0.1.4:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}"}, {
-          minTLSVersion = "tls1.3"
+      addDOHLocal("10.0.1.4:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
+          minTLSVersion = "tls1.2"
       })
       addDOHLocal("10.8.0.1:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
-          minTLSVersion = "tls1.3"
+          minTLSVersion = "tls1.2"
       })
       addDOHLocal("127.0.0.1:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
-          minTLSVersion = "tls1.3"
+          minTLSVersion = "tls1.2"
       })
 
       -- ========================================================
@@ -221,13 +221,12 @@ write_files:
       whitelist:addMask("10.0.1.0/24")
 
       addAction(
-          AndRule({NotRule(NetmaskGroupRule(whitelist)), MaxQPSIPRule(50, 32, 64)}),
+          AndRule({NotRule(NetmaskGroupRule(whitelist)), MaxQPSIPRule(100, 32, 64)}),
           DropAction()
       )
 
       local dbr = dynBlockRulesGroup()
-      dbr:setQueryRate(30, 10, "Exceeded query rate limit", 60)
-      dbr:setRCodeRate(DNSRCode.NXDOMAIN, 15, 10, "NXDOMAIN flood attempt", 60)
+      dbr:setQueryRate(300, 10, "Exceeded query rate limit", 60)
       dbr:excludeRange(whitelist)
 
       function maintenance()
