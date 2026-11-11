@@ -26,3 +26,6 @@ terraform.rc
 # Client configs
 *.conf
 clients/
+
+# Generated DNS profiles
+*.mobileconfig

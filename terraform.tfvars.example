@@ -42,3 +42,11 @@ admin_ssh_allowed_cidrs = [
   "0.0.0.0/0"
   # "203.0.113.50/32" # Example: restrict to a specific static public IP
 ]
+
+# WireGuard peers. Omit public_key / preshared_key to have Terraform generate
+# them and write the client config into clients/.
+peers = {
+  laptop = {
+    ip = "10.8.0.2"
+  }
+}

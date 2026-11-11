@@ -14,6 +14,14 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.5"
     }
+    wireguard = {
+      source  = "OJFord/wireguard"
+      version = "~> 0.4.1"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.4"
+    }
   }
 }
 

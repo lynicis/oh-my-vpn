@@ -22,6 +22,16 @@ variable "location" {
   default     = "austriaeast"
 }
 
+variable "peers" {
+  description = "Map of WireGuard peer configurations to generate."
+  type = map(object({
+    ip            = string
+    public_key    = optional(string)
+    preshared_key = optional(string)
+  }))
+  default = {}
+}
+
 variable "resource_group_name" {
   description = "Name of the Azure Resource Group."
   type        = string
