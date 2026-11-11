@@ -11,6 +11,11 @@ packages:
   - curl
   - unbound
   - unbound-anchor
+  - dnsdist
+  - fail2ban
+  - ufw
+  - certbot
+  - python3-certbot-dns-cloudflare
 
 write_files:
   - path: /etc/sysctl.d/99-wireguard.conf
@@ -20,11 +25,99 @@ write_files:
       net.ipv4.ip_forward = 1
       net.ipv6.conf.all.forwarding = 1
 
+  - path: /etc/sysctl.d/99-security-hardening.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # Prevent core dumps of setuid programs
+      fs.suid_dumpable = 0
+
+      # Protect FIFOs and regular files in world-writable sticky directories
+      fs.protected_fifos = 2
+      fs.protected_regular = 2
+
+      # Core dumps include PID
+      kernel.core_uses_pid = 1
+
+      # Restrict SysRq
+      kernel.sysrq = 0
+
+      # Disable unprivileged eBPF
+      kernel.unprivileged_bpf_disabled = 1
+
+      # Ignore ICMP broadcast requests and bogus errors
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.icmp_ignore_bogus_error_responses = 1
+
+      # Ignore ICMP redirects
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+
+      # Do not send ICMP redirects
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.send_redirects = 0
+
+      # Ignore source routed packets
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      net.ipv6.conf.default.accept_source_route = 0
+
+      # Log Martian packets
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.default.log_martians = 1
+
+      # Disable TCP timestamps to prevent remote uptime fingerprinting
+      net.ipv4.tcp_timestamps = 0
+
+  - path: /etc/systemd/journald.conf.d/paranoid.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Journal]
+      Storage=volatile
+      RuntimeMaxUse=16M
+      MaxRetentionSec=1day
+
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      # SSH Hardening
+      X11Forwarding no
+      MaxAuthTries 3
+      LogLevel VERBOSE
+      AllowAgentForwarding no
+      ClientAliveCountMax 2
+      PermitRootLogin prohibit-password
+
+  - path: /etc/systemd/resolved.conf.d/90-pi-hole-disable-stub-listener.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Resolve]
+      DNSStubListener=no
+
+  - path: /etc/systemd/resolved.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Resolve]
+      DNS=127.0.0.1#${server_domain_name}
+      DNSOverTLS=yes
+
   - path: /etc/unbound/unbound.conf.d/pi-hole.conf
     owner: root:root
     permissions: '0644'
     content: |
       server:
+        module-config: "validator iterator"
+        edns-tcp-keepalive: yes
+        tcp-idle-timeout: 60000
+        outgoing-num-tcp: 100
+        incoming-num-tcp: 100
         verbosity: 0
         interface: 127.0.0.1
         port: 5335
@@ -36,11 +129,23 @@ write_files:
         root-hints: /var/lib/unbound/root.hints
         harden-glue: yes
         harden-dnssec-stripped: yes
+        harden-algo-downgrade: yes
+        harden-short-bufsize: yes
+        harden-large-queries: yes
+        val-clean-additional: yes
         use-caps-for-id: no
         edns-buffer-size: 1232
         prefetch: yes
         num-threads: 1
+        qname-minimisation: yes
+        hide-identity: yes
+        hide-version: yes
+        client-subnet-always-forward: no
         so-rcvbuf: 1m
+        msg-cache-size: 64m
+        rrset-cache-size: 128m
+        cache-min-ttl: 300
+        cache-max-ttl: 86400
         private-address: 192.168.0.0/16
         private-address: 169.254.0.0/16
         private-address: 172.16.0.0/12
@@ -50,6 +155,117 @@ write_files:
         logfile: ""
         log-queries: no
         log-replies: no
+
+  - path: /etc/dnsdist/dnsdist.conf
+    owner: root:root
+    permissions: '0640'
+    content: |
+      -- ========================================================
+      -- Global Settings & Buffers
+      -- ========================================================
+      setRingBuffersSize(0)
+      setTCPRecvTimeout(5)
+      setTCPSendTimeout(5)
+      setMaxTCPConnectionsPerClient(15)
+      setACL({"0.0.0.0/0", "::/0"})
+      controlSocket("127.0.0.1:5199")
+      setKey("Pga+xLRuvu2SrHR91GTPhQsvqQEXbrxFUyD0j+vzXWQ=")
+
+      -- ========================================================
+      -- Downstream Backends (Pi-hole)
+      -- ========================================================
+      newServer({
+          address = "10.0.1.4:53",
+          name = "pihole-tcp",
+          tcpOnly = true,
+          useClientSubnet = false,
+          checkInterval = 2,
+          maxCheckFailures = 3
+      })
+
+      -- ========================================================
+      -- TLS / DoT Listeners (Port 853) - TLS 1.3
+      -- ========================================================
+      addTLSLocal("10.0.1.4:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
+          provider = "openssl",
+          minTLSVersion = "tls1.3"
+      })
+      addTLSLocal("10.8.0.1:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
+          provider = "openssl",
+          minTLSVersion = "tls1.3"
+      })
+      addTLSLocal("127.0.0.1:853", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {
+          provider = "openssl",
+          minTLSVersion = "tls1.3"
+      })
+
+      -- ========================================================
+      -- DoH Listeners (Port 443) - TLS 1.3
+      -- ========================================================
+      addDOHLocal("10.0.1.4:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}"}, {
+          minTLSVersion = "tls1.3"
+      })
+      addDOHLocal("10.8.0.1:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
+          minTLSVersion = "tls1.3"
+      })
+      addDOHLocal("127.0.0.1:443", "/etc/dnsdist/fullchain.pem", "/etc/dnsdist/privkey.pem", {"${doh_path}", "/dns-query"}, {
+          minTLSVersion = "tls1.3"
+      })
+
+      -- ========================================================
+      -- DDoS Protection, Rate Limiting & Whitelist
+      -- ========================================================
+      local whitelist = newNMG()
+      whitelist:addMask("127.0.0.1/32")
+      whitelist:addMask("10.8.0.0/24")
+      whitelist:addMask("10.0.1.0/24")
+
+      addAction(
+          AndRule({NotRule(NetmaskGroupRule(whitelist)), MaxQPSIPRule(50, 32, 64)}),
+          DropAction()
+      )
+
+      local dbr = dynBlockRulesGroup()
+      dbr:setQueryRate(30, 10, "Exceeded query rate limit", 60)
+      dbr:setRCodeRate(DNSRCode.NXDOMAIN, 15, 10, "NXDOMAIN flood attempt", 60)
+      dbr:excludeRange(whitelist)
+
+      function maintenance()
+          dbr:apply()
+      end
+
+  - path: /etc/fail2ban/jail.local
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [DEFAULT]
+      bantime = 1h
+      findtime = 10m
+      maxretry = 5
+      banaction = ufw
+      ignoreip = 127.0.0.1/8 ::1 10.8.0.0/24 10.0.1.0/24
+
+      [sshd]
+      enabled = true
+      port = 22
+      mode = aggressive
+      backend = systemd
+
+  - path: /etc/letsencrypt/renewal-hooks/deploy/dnsdist.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      cp -L /etc/letsencrypt/live/${server_domain_name}/fullchain.pem /etc/dnsdist/fullchain.pem
+      cp -L /etc/letsencrypt/live/${server_domain_name}/privkey.pem /etc/dnsdist/privkey.pem
+
+      chown _dnsdist:_dnsdist /etc/dnsdist/fullchain.pem /etc/dnsdist/privkey.pem
+      chmod 600 /etc/dnsdist/privkey.pem
+      chmod 644 /etc/dnsdist/fullchain.pem
+
+      systemctl restart dnsdist
 
   - path: /etc/pihole/setupVars.conf
     owner: root:root
@@ -71,6 +287,7 @@ write_files:
     content: |
       PRIVACYLEVEL=3
       DBFILE=
+      LOCAL_IPV4=10.8.0.1
 
   - path: /usr/local/bin/init-wireguard.sh
     owner: root:root
@@ -86,6 +303,7 @@ write_files:
 
       # Apply sysctl settings
       sysctl -p /etc/sysctl.d/99-wireguard.conf
+      sysctl -p /etc/sysctl.d/99-security-hardening.conf
 
       # Detect default network interface
       DEFAULT_NIC=$(ip route show default 2>/dev/null | awk '/default/ {print $5}' | head -n1)
@@ -93,10 +311,13 @@ write_files:
         DEFAULT_NIC="eth0"
       fi
 
-      # Server public IP resolution
-      SERVER_PUB_IP="${server_public_ip}"
-      if [ -z "$SERVER_PUB_IP" ] || [ "$SERVER_PUB_IP" = "null" ]; then
-        SERVER_PUB_IP=$(curl -s -4 ifconfig.me || curl -s -4 icanhazip.com || true)
+      # Server endpoint resolution (domain name or public IP)
+      SERVER_ENDPOINT="${server_domain_name}"
+      if [ -z "$SERVER_ENDPOINT" ] || [ "$SERVER_ENDPOINT" = "null" ]; then
+        SERVER_ENDPOINT="${server_public_ip}"
+        if [ -z "$SERVER_ENDPOINT" ] || [ "$SERVER_ENDPOINT" = "null" ]; then
+          SERVER_ENDPOINT=$(curl -s -4 ifconfig.me || curl -s -4 icanhazip.com || true)
+        fi
       fi
 
       WG_PORT="${wireguard_port}"
@@ -154,7 +375,7 @@ write_files:
 
       [Peer]
       PublicKey = $SERVER_PUB_KEY
-      Endpoint = $SERVER_PUB_IP:$WG_PORT
+      Endpoint = $SERVER_ENDPOINT:$WG_PORT
       AllowedIPs = 0.0.0.0/0
       PersistentKeepalive = 25
       PresharedKey = $CLIENT1_PSK
@@ -167,7 +388,7 @@ write_files:
       chmod 600 "$CLIENTS_DIR/client1.conf"
 
       # Save endpoint info for helper scripts
-      echo "$SERVER_PUB_IP:$WG_PORT" > "$WG_DIR/endpoint.info"
+      echo "$SERVER_ENDPOINT:$WG_PORT" > "$WG_DIR/endpoint.info"
       chmod 600 "$WG_DIR/endpoint.info"
 
       # Enable and start WireGuard systemd service
@@ -196,6 +417,7 @@ write_files:
 
       WG_DIR="/etc/wireguard"
       CLIENTS_DIR="/home/${admin_username}/wireguard-clients"
+      mkdir -p "$CLIENTS_DIR"
 
       if [ "$EUID" -ne 0 ]; then
         echo "Error: This script must be run as root (e.g. using sudo)."
@@ -207,7 +429,7 @@ write_files:
         exit 1
       fi
 
-      if [ -f "$CLIENTS_DIR/$CLIENT_NAME.conf" ] || grep -q "# Peer: $CLIENT_NAME\$" "$WG_DIR/wg0.conf"; then
+      if [ -f "$WG_DIR/$CLIENT_NAME.conf" ] || [ -f "$CLIENTS_DIR/$CLIENT_NAME.conf" ] || grep -q "# Peer: $CLIENT_NAME\$" "$WG_DIR/wg0.conf"; then
         echo "Error: Client '$CLIENT_NAME' already exists."
         exit 1
       fi
@@ -257,7 +479,7 @@ write_files:
       EOF
 
       # Write client configuration file
-      CLIENT_CONF="$CLIENTS_DIR/$CLIENT_NAME.conf"
+      CLIENT_CONF="$WG_DIR/$CLIENT_NAME.conf"
       cat <<EOF > "$CLIENT_CONF"
       [Interface]
       PrivateKey = $CLIENT_PRIV_KEY
@@ -272,8 +494,10 @@ write_files:
       PresharedKey = $CLIENT_PSK
       EOF
 
-      chown ${admin_username}:${admin_username} "$CLIENT_CONF"
       chmod 600 "$CLIENT_CONF"
+      cp "$CLIENT_CONF" "$CLIENTS_DIR/$CLIENT_NAME.conf"
+      chown ${admin_username}:${admin_username} "$CLIENTS_DIR/$CLIENT_NAME.conf"
+      chmod 600 "$CLIENTS_DIR/$CLIENT_NAME.conf"
 
       echo "================================================================="
       echo " WireGuard client '$CLIENT_NAME' created successfully!"
@@ -288,13 +512,47 @@ write_files:
       echo "Configuration file saved to: $CLIENT_CONF"
 
 runcmd:
+  # --- Sysctl apply ---
+  - sysctl --system
+  # --- Systemd-resolved: disable stub listener and apply DNS configuration ---
+  - systemctl restart systemd-resolved
   # --- Unbound: download root hints and start service ---
   - curl -o /var/lib/unbound/root.hints https://www.internic.net/domain/named.root
   - systemctl enable unbound
-  - systemctl start unbound
+  - systemctl restart unbound
   # --- Pi-hole: run unattended installer (setupVars.conf already written) ---
   - curl -sSL https://install.pi-hole.net | bash /dev/stdin --unattended
   # --- Pi-hole: restart pihole-FTL so pihole-FTL.conf no-log overrides take effect ---
   - systemctl restart pihole-FTL
+  # --- Dnsdist: initialize temporary TLS certificates if missing so service starts cleanly ---
+  - |
+    if [ ! -f /etc/dnsdist/fullchain.pem ] || [ ! -f /etc/dnsdist/privkey.pem ]; then
+      mkdir -p /etc/dnsdist
+      openssl req -x509 -newkey rsa:2048 -keyout /etc/dnsdist/privkey.pem -out /etc/dnsdist/fullchain.pem -days 365 -nodes -subj '/CN=${server_domain_name}'
+      chown _dnsdist:_dnsdist /etc/dnsdist/fullchain.pem /etc/dnsdist/privkey.pem
+      chmod 644 /etc/dnsdist/fullchain.pem
+      chmod 600 /etc/dnsdist/privkey.pem
+    fi
+  - systemctl enable dnsdist
+  - systemctl restart dnsdist
   # --- WireGuard initialisation ---
   - [ /usr/local/bin/init-wireguard.sh ]
+  # --- Firewall (UFW) configuration matching VM ---
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw default deny routed
+  - ufw allow in on lo to any port 53
+  - ufw allow in on wg0 to any port 53
+  - ufw deny 53/tcp comment 'Block public plaintext DNS'
+  - ufw deny 53/udp comment 'Block public plaintext DNS'
+  - ufw deny in on eth0 to any port 80/tcp comment 'Block public HTTP on eth0'
+  - ufw allow 22/tcp comment 'SSH'
+  - ufw allow 853/tcp comment 'DNS-over-TLS'
+  - ufw allow ${wireguard_port}/udp comment 'WireGuard VPN'
+  - ufw allow in on lo comment 'Allow Loopback'
+  - ufw allow in on wg0 comment 'Allow WireGuard interface'
+  - ufw allow 443/tcp comment 'DNS-over-HTTPS'
+  - ufw --force enable
+  # --- Fail2ban initialisation ---
+  - systemctl enable fail2ban
+  - systemctl restart fail2ban

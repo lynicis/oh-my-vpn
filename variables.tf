@@ -7,13 +7,19 @@ variable "admin_ssh_allowed_cidrs" {
 variable "admin_username" {
   description = "Administrator username for the Linux virtual machine."
   type        = string
-  default     = "azureuser"
+  default     = "lynicis"
+}
+
+variable "doh_secret_path" {
+  description = "Optional custom secret path suffix for DNS-over-HTTPS (e.g. '230a4c95'). If null or empty, a random hex secret is generated."
+  type        = string
+  default     = null
 }
 
 variable "location" {
-  description = "The Azure region where all resources will be provisioned. Defaults to cost-effective Sweden Central."
+  description = "The Azure region where all resources will be provisioned. Defaults to Austria East."
   type        = string
-  default     = "swedencentral"
+  default     = "austriaeast"
 }
 
 variable "resource_group_name" {
@@ -27,10 +33,16 @@ variable "ssh_public_key" {
   type        = string
 }
 
-variable "vm_size" {
-  description = "Azure Virtual Machine SKU size. Defaults to economical burstable Standard_B1s."
+variable "server_domain_name" {
+  description = "Domain name / FQDN assigned to the WireGuard and DNS server (e.g. dns.lynicis.dev)."
   type        = string
-  default     = "Standard_B1s"
+  default     = "dns.lynicis.dev"
+}
+
+variable "vm_size" {
+  description = "Azure Virtual Machine SKU size. Defaults to Standard_B2ats_v2."
+  type        = string
+  default     = "Standard_B2ats_v2"
 }
 
 variable "wireguard_port" {

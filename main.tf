@@ -79,6 +79,34 @@ resource "azurerm_network_security_rule" "ssh" {
   network_security_group_name = azurerm_network_security_group.wireguard.name
 }
 
+resource "azurerm_network_security_rule" "dot" {
+  name                        = "Allow-DoT-853"
+  priority                    = 310
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "853"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.main.name
+  network_security_group_name = azurerm_network_security_group.wireguard.name
+}
+
+resource "azurerm_network_security_rule" "doh" {
+  name                        = "Allow-DoH-443"
+  priority                    = 320
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.main.name
+  network_security_group_name = azurerm_network_security_group.wireguard.name
+}
+
 resource "azurerm_network_interface" "wireguard" {
   name                = "nic-wireguard"
   location            = azurerm_resource_group.main.location
@@ -97,6 +125,19 @@ resource "azurerm_network_interface" "wireguard" {
 resource "azurerm_network_interface_security_group_association" "wireguard" {
   network_interface_id      = azurerm_network_interface.wireguard.id
   network_security_group_id = azurerm_network_security_group.wireguard.id
+}
+
+# ==============================================================================
+# DNS-over-HTTPS Secret Path Generation
+# ==============================================================================
+
+resource "random_id" "doh_secret" {
+  byte_length = 4
+}
+
+locals {
+  doh_secret = var.doh_secret_path != null && var.doh_secret_path != "" ? var.doh_secret_path : random_id.doh_secret.hex
+  doh_path   = "/dns-query-${local.doh_secret}"
 }
 
 # ==============================================================================
@@ -133,10 +174,18 @@ resource "azurerm_linux_virtual_machine" "wireguard" {
   }
 
   custom_data = base64encode(templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    server_public_ip = azurerm_public_ip.wireguard.ip_address
-    wireguard_port   = var.wireguard_port
-    admin_username   = var.admin_username
+    server_public_ip   = azurerm_public_ip.wireguard.ip_address
+    server_domain_name = var.server_domain_name
+    wireguard_port     = var.wireguard_port
+    admin_username     = var.admin_username
+    doh_path           = local.doh_path
   }))
+
+  lifecycle {
+    ignore_changes = [
+      custom_data,
+    ]
+  }
 
   tags = azurerm_resource_group.main.tags
 }

@@ -25,6 +25,13 @@ admin_username = "azureuser"
 # Replace with the contents of your public key (e.g. `cat ~/.ssh/id_ed25519.pub` or `cat ~/.ssh/id_rsa.pub`)
 ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxExamplePublicKeyStringDoNotUseAsIs admin@localhost"
 
+
+# Domain name / FQDN assigned to WireGuard and DNS
+server_domain_name = "dns.example.com"
+
+# Optional custom secret path suffix for DNS-over-HTTPS (e.g. "mysecret123").
+# If left null or unset, a random 8-character hex string is automatically generated.
+# doh_secret_path = null
 # WireGuard UDP listening port (default standard WireGuard port is 51820)
 wireguard_port = 51820
 
