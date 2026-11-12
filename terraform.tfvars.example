@@ -6,20 +6,17 @@
 # ==============================================================================
 
 # Target Azure region
-# Sweden Central is recommended for lowest compute and egress costs in Azure Europe.
-# Other cost-effective EU alternatives: "northeurope" (Ireland), "polandcentral" (Poland), "germanywestcentral" (Germany)
-location = "swedencentral"
+location = "austriaeast"
 
 # Dedicated resource group name
 resource_group_name = "rg-wireguard-vpn"
 
 # Virtual machine size
-# Standard_B1s (1 vCPU, 1 GiB RAM) provides an ideal balance of cost (~$5-7/month) and memory headroom for Ubuntu 24.04.
-# For higher throughput (>200 Mbps) or many concurrent peers, consider "Standard_B2s" (2 vCPU, 4 GiB RAM).
-vm_size = "Standard_B1s"
+# Standard_B2ats_v2 (burstable) runs WireGuard, Pi-hole, unbound and dnsdist.
+vm_size = "Standard_B2ats_v2"
 
 # Linux VM administrator username
-admin_username = "azureuser"
+admin_username = "lynicis"
 
 # SSH public key for the admin user (REQUIRED)
 # Replace with the contents of your public key (e.g. `cat ~/.ssh/id_ed25519.pub` or `cat ~/.ssh/id_rsa.pub`)
