@@ -141,7 +141,7 @@ resource "azurerm_network_interface_security_group_association" "wireguard" {
 # ==============================================================================
 
 resource "random_id" "doh_secret" {
-  byte_length = 4
+  byte_length = 16
 }
 
 locals {
