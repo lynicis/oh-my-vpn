@@ -1,8 +1,10 @@
 # oh-my-vpn
 
+[![CI](https://github.com/lynicis/oh-my-vpn/actions/workflows/ci.yml/badge.svg)](https://github.com/lynicis/oh-my-vpn/actions/workflows/ci.yml)
+
 WireGuard VPN and a private DNS resolver on one Azure VM, provisioned with Terraform. The VM runs WireGuard, Pi-hole, unbound and dnsdist, so every connected device resolves through a resolver you control.
 
-Status: feature-frozen personal deployment, last updated 2026-11-12. No CI and no automated tests; `terraform validate` is the only check. Expect security fixes only.
+Status: feature-frozen personal deployment, last updated 2026-11-12. Expect security fixes only. CI runs `terraform fmt -check`, `validate`, tflint and a Trivy config scan on every push and pull request; there are no behavioural tests. Changes are listed in [CHANGELOG.md](./CHANGELOG.md) and tagged `vX.Y.Z`.
 
 ## What it runs
 
