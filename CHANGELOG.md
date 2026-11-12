@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
+### Added
+
+- GitHub Actions CI on every pull request and push to `main`: `terraform fmt -check`, `init -lockfile=readonly`, `validate`, tflint with the bundled recommended ruleset, and a Trivy config scan that fails on HIGH or CRITICAL findings.
+- Tag-driven release workflow: pushing a `vX.Y.Z` tag publishes a GitHub release from that version's CHANGELOG section.
+- Dependabot configuration for weekly GitHub Actions and Terraform provider updates.
+
+### Changed
+
+- Bumped the `hashicorp/azurerm` provider from 4.81.0 to 5.13.0 and widened the constraint to `>= 3.0, < 5.14`.
+- The dependency lock file is now exported with Linux hashes so CI can verify providers against the committed lock file.
+- NSG rules that are intentionally reachable from the internet (WireGuard, DoT, DoH) carry inline Trivy ignore annotations.
+
 ## [0.1.0] - 2026-11-12
 
 First public release. Terraform deploys a WireGuard VPN and a private DNS resolver on a single Azure VM.
@@ -25,5 +39,6 @@ First public release. Terraform deploys a WireGuard VPN and a private DNS resolv
 
 - Relaxed dnsdist connection and rate limits so mobile clients on the tunnel resolve reliably.
 
-[Unreleased]: https://github.com/lynicis/oh-my-vpn/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/lynicis/oh-my-vpn/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/lynicis/oh-my-vpn/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lynicis/oh-my-vpn/releases/tag/v0.1.0
