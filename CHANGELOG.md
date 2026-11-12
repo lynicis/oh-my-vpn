@@ -4,8 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-12
+
 ### Fixed
 
+- The DoH secret path is now 128-bit instead of 32-bit; the previous value was brute-forceable and acts as a bearer credential in every client profile. Existing deployments get a new path on the next apply, so regenerate client artifacts.
 - README status line now states what CI actually runs and links this changelog, instead of claiming there is no CI.
 - `terraform.tfvars.example` ships a syntactically valid placeholder SSH key, so `terraform plan` succeeds before you replace it.
 
@@ -44,6 +47,7 @@ First public release. Terraform deploys a WireGuard VPN and a private DNS resolv
 
 - Relaxed dnsdist connection and rate limits so mobile clients on the tunnel resolve reliably.
 
-[Unreleased]: https://github.com/lynicis/oh-my-vpn/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/lynicis/oh-my-vpn/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/lynicis/oh-my-vpn/releases/tag/v0.2.1
 [0.2.0]: https://github.com/lynicis/oh-my-vpn/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lynicis/oh-my-vpn/releases/tag/v0.1.0
