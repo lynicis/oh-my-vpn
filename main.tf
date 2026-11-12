@@ -51,6 +51,8 @@ resource "azurerm_network_security_group" "wireguard" {
   tags = azurerm_resource_group.main.tags
 }
 
+# Public by design: VPN clients connect from arbitrary networks.
+#trivy:ignore:AZU-0047
 resource "azurerm_network_security_rule" "wireguard_udp" {
   name                        = "Allow-WireGuard-Inbound"
   priority                    = 100
@@ -65,6 +67,9 @@ resource "azurerm_network_security_rule" "wireguard_udp" {
   network_security_group_name = azurerm_network_security_group.wireguard.name
 }
 
+# Scanner only sees the 0.0.0.0/0 default; restrict via admin_ssh_allowed_cidrs in terraform.tfvars.
+#trivy:ignore:AZU-0047
+#trivy:ignore:AZU-0050
 resource "azurerm_network_security_rule" "ssh" {
   name                        = "Allow-SSH-Inbound"
   priority                    = 110
@@ -79,6 +84,8 @@ resource "azurerm_network_security_rule" "ssh" {
   network_security_group_name = azurerm_network_security_group.wireguard.name
 }
 
+# Public by design: encrypted DNS endpoint for off-tunnel devices.
+#trivy:ignore:AZU-0047
 resource "azurerm_network_security_rule" "dot" {
   name                        = "Allow-DoT-853"
   priority                    = 310
@@ -93,6 +100,8 @@ resource "azurerm_network_security_rule" "dot" {
   network_security_group_name = azurerm_network_security_group.wireguard.name
 }
 
+# Public by design: encrypted DNS endpoint for off-tunnel devices.
+#trivy:ignore:AZU-0047
 resource "azurerm_network_security_rule" "doh" {
   name                        = "Allow-DoH-443"
   priority                    = 320
